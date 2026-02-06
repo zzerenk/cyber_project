@@ -2,8 +2,28 @@
 
 {% block content %}
 <div class="text-center mt-5">
-    <h1>Hoş Geldin Dedektif</h1>
+    <h1>Hoş Geldin Dedektif Poirot</h1>
     <p class="lead">Küçük gri hücrelerini çalıştırmaya hazır mısın?</p>
-    <button class="btn btn-primary btn-lg mt-3">Yeni Tarama Başlat</button>
+
+    <div class="row justify-content-center mt-4">
+        <div class="col-md-8 col-lg-6">
+            <div class="input-group input-group-lg shadow-sm">
+                <input type="text" id="targetInput" class="form-control" placeholder="Örn: scanme.nmap.org">
+                
+                <button class="btn btn-primary" type="button" id="scanBtn">
+                    Taramayı Başlat
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-10">
+            <div id="resultArea" style="display: none;"></div>
+        </div>
+    </div>
 </div>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
 {% endblock %}
