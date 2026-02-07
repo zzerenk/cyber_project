@@ -1,53 +1,76 @@
-from flask import Blueprint, render_template, request, jsonify
-from app import db
-from app.models.scan_record import ScanRecord
+from flask import Blueprint, request, jsonify, render_template # <--- render_template EKLENDİ
 from app.core.scanner import NmapScanner
+import threading
+import uuid
+import time
 
-main = Blueprint('main', __name__)
+# Blueprint tanımlıyoruz
+api = Blueprint('api', __name__)
 
-# Anasayfayı açan rota
-@main.route('/')
-def home():
+# Geçici Hafıza (Task Listesi)
+SCAN_TASKS = {}
+
+# --- 1. EKSİK OLAN PARÇA: ANA SAYFA ROTASI ---
+@api.route('/')
+def index():
+    # Tarayıcı siteye girince home.html'i gösterir
     return render_template('pages/home.html')
 
-# Taramayı başlatan API rotası (Frontend buraya istek atacak)
-@main.route('/api/scan', methods=['POST'])
-def start_scan():
-    # 1. Frontend'den gelen veriyi al
-    data = request.get_json()
-    target_ip = data.get('target')
-    
-    if not target_ip:
-        return jsonify({"error": "IP adresi girilmedi mon ami!"}), 400
 
-    # 2. Tarama Motorunu Çalıştır
+# --- 2. ASENKRON İŞÇİ (Arka Plan Görevi) ---
+def run_scan_in_background(task_id, target, options):
     scanner = NmapScanner()
-    result = scanner.scan_target(target_ip)
-
-    # 3. Sonucu Veritabanına Kaydet (Hafıza)
-    if result.get('success'):
-        # Başarılıysa verileri doldur
-        new_record = ScanRecord(
-            target_ip=target_ip,
-            status='completed',
-            raw_data=result['full_data'] # Tüm Nmap çıktısını saklıyoruz
-        )
-    else:
-        # Hata varsa, hatayı kaydet
-        new_record = ScanRecord(
-            target_ip=target_ip,
-            status='failed',
-            raw_data={"error": result.get('error')}
-        )
-
-    # DB'ye işle (Commit)
+    
+    SCAN_TASKS[task_id]['status'] = 'running'
+    SCAN_TASKS[task_id]['message'] = '🕵️‍♂️ Dedektif olay yerine intikal ediyor (Nmap Başlatılıyor)...'
+    SCAN_TASKS[task_id]['progress'] = 10
+    
     try:
-        db.session.add(new_record)
-        db.session.commit()
-        print("Sonuç veritabanına kaydedildi.")
-    except Exception as e:
-        print(f"Veritabanı Hatası: {e}")
-        db.session.rollback() # Hata olursa işlemi geri al
+        # Taramayı Yap
+        result = scanner.scan_target(target, options)
+        
+        # Bitiş Durumu
+        SCAN_TASKS[task_id]['status'] = 'completed'
+        SCAN_TASKS[task_id]['message'] = '✅ Kanıtlar toplandı, rapor hazır.'
+        SCAN_TASKS[task_id]['progress'] = 100
+        SCAN_TASKS[task_id]['result'] = result
 
-    # 4. Sonucu Frontend'e Döndür
-    return jsonify(result)
+    except Exception as e:
+        SCAN_TASKS[task_id]['status'] = 'failed'
+        SCAN_TASKS[task_id]['message'] = f'❌ Bir hata oluştu: {str(e)}'
+        SCAN_TASKS[task_id]['progress'] = 0
+
+
+# --- 3. API ENDPOINTLERİ (Başlarına /api ekledik) ---
+
+@api.route('/api/scan', methods=['POST']) # <--- Adres /api/scan oldu
+def start_scan():
+    data = request.get_json()
+    target = data.get('target')
+    options = data.get('options', {})
+
+    if not target:
+        return jsonify({"success": False, "error": "Hedef belirtilmedi"}), 400
+
+    task_id = str(uuid.uuid4())
+    
+    SCAN_TASKS[task_id] = {
+        'status': 'pending',
+        'message': 'Sıraya alındı...',
+        'progress': 0,
+        'result': None
+    }
+
+    thread = threading.Thread(target=run_scan_in_background, args=(task_id, target, options))
+    thread.start()
+
+    return jsonify({"success": True, "task_id": task_id})
+
+@api.route('/api/status/<task_id>', methods=['GET']) # <--- Adres /api/status/... oldu
+def check_status(task_id):
+    task = SCAN_TASKS.get(task_id)
+    
+    if not task:
+        return jsonify({"success": False, "error": "Böyle bir görev bulunamadı"}), 404
+        
+    return jsonify(task)
