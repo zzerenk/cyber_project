@@ -1,28 +1,406 @@
 {% extends "layouts/base.html" %}
 
 {% block content %}
-<div class="text-center mt-5">
-    <h1>Hoş Geldin Dedektif Poirot</h1>
-    <p class="lead">Küçük gri hücrelerini çalıştırmaya hazır mısın?</p>
+<!-- Professional Cybersecurity Dashboard -->
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap');
 
-    <div class="row justify-content-center mt-4">
-        <div class="col-md-8 col-lg-6">
-            <div class="input-group input-group-lg shadow-sm">
-                <input type="text" id="targetInput" class="form-control" placeholder="Örn: scanme.nmap.org">
-                
-                <button class="btn btn-primary" type="button" id="scanBtn">
-                    Taramayı Başlat
-                </button>
+    :root {
+        --bg-primary: #0a0a0a;
+        --bg-secondary: #111827;
+        --bg-tertiary: #1f2937;
+        --accent-cyber: #00f2ff;
+        --accent-navy: #1e3a8a;
+        --text-primary: #f3f4f6;
+        --text-secondary: #9ca3af;
+        --border-color: #374151;
+        --success: #10b981;
+        --warning: #f59e0b;
+        --danger: #ef4444;
+    }
+
+    body {
+        background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+        font-family: 'Inter', sans-serif;
+        color: var(--text-primary);
+        min-height: 100vh;
+    }
+
+    .dashboard-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    /* Header */
+    .cyber-header {
+        background: linear-gradient(135deg, var(--accent-navy) 0%, #0f172a 100%);
+        padding: 20px 30px;
+        border-radius: 12px;
+        margin-bottom: 30px;
+        box-shadow: 0 4px 20px rgba(0, 242, 255, 0.1);
+        border: 1px solid rgba(0, 242, 255, 0.2);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .cyber-header h1 {
+        font-size: 28px;
+        font-weight: 700;
+        margin: 0;
+        color: var(--accent-cyber);
+        text-transform: uppercase;
+        letter-spacing: 2px;
+    }
+
+    .cyber-header .subtitle {
+        font-size: 12px;
+        color: var(--text-secondary);
+        margin-top: 4px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    /* Input Section */
+    .input-section {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 25px;
+        margin-bottom: 25px;
+        box-shadow: 0 2px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .section-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--accent-cyber);
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+    }
+
+    .section-title::before {
+        content: '';
+        width: 4px;
+        height: 16px;
+        background: var(--accent-cyber);
+        margin-right: 10px;
+        border-radius: 2px;
+    }
+
+    .target-input-group {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 25px;
+    }
+
+    .target-input {
+        flex: 1;
+        background: var(--bg-tertiary);
+        border: 2px solid var(--border-color);
+        color: var(--text-primary);
+        padding: 14px 20px;
+        border-radius: 8px;
+        font-size: 15px;
+        font-family: 'Roboto Mono', monospace;
+        transition: all 0.3s ease;
+    }
+
+    .target-input:focus {
+        outline: none;
+        border-color: var(--accent-cyber);
+        box-shadow: 0 0 0 3px rgba(0, 242, 255, 0.1);
+    }
+
+    .scan-btn {
+        background: linear-gradient(135deg, var(--accent-cyber) 0%, #0891b2 100%);
+        color: var(--bg-primary);
+        border: none;
+        padding: 14px 40px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 15px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(0, 242, 255, 0.3);
+    }
+
+    .scan-btn:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 242, 255, 0.4);
+    }
+
+    .scan-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    /* Scan Configuration Cards */
+    .config-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+
+    .config-card {
+        background: var(--bg-tertiary);
+        border: 2px solid var(--border-color);
+        border-radius: 10px;
+        padding: 18px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+
+    .config-card:hover {
+        border-color: var(--accent-cyber);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0, 242, 255, 0.15);
+    }
+
+    .config-card.active {
+        border-color: var(--accent-cyber);
+        background: rgba(0, 242, 255, 0.05);
+    }
+
+    .config-card input[type="checkbox"] {
+        position: absolute;
+        opacity: 0;
+    }
+
+    .config-card-title {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .config-card-desc {
+        font-size: 13px;
+        color: var(--text-secondary);
+        line-height: 1.5;
+    }
+
+    .check-indicator {
+        width: 20px;
+        height: 20px;
+        border: 2px solid var(--border-color);
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+    }
+
+    .config-card.active .check-indicator {
+        background: var(--accent-cyber);
+        border-color: var(--accent-cyber);
+    }
+
+    .check-indicator::after {
+        content: '✓';
+        color: var(--bg-primary);
+        font-weight: bold;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .config-card.active .check-indicator::after {
+        opacity: 1;
+    }
+
+    /* Speed Options */
+    .speed-options {
+        display: flex;
+        gap: 12px;
+        padding: 15px;
+        background: rgba(0, 242, 255, 0.03);
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+    }
+
+    .speed-option {
+        flex: 1;
+        text-align: center;
+    }
+
+    .speed-option input[type="radio"] {
+        display: none;
+    }
+
+    .speed-option label {
+        display: block;
+        padding: 10px;
+        background: var(--bg-tertiary);
+        border: 2px solid var(--border-color);
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 13px;
+        font-weight: 500;
+    }
+
+    .speed-option input[type="radio"]:checked+label {
+        background: rgba(0, 242, 255, 0.1);
+        border-color: var(--accent-cyber);
+        color: var(--accent-cyber);
+    }
+
+    /* Terminal Console */
+    .terminal-console {
+        background: #000;
+        border: 1px solid var(--accent-cyber);
+        border-radius: 8px;
+        padding: 15px;
+        font-family: 'Roboto Mono', monospace;
+        font-size: 13px;
+        color: #00ff00;
+        height: 200px;
+        overflow-y: auto;
+        margin-top: 20px;
+        box-shadow: 0 0 20px rgba(0, 242, 255, 0.2);
+        display: none;
+    }
+
+    .terminal-console.active {
+        display: block;
+    }
+
+    .terminal-line {
+        margin: 4px 0;
+        line-height: 1.5;
+    }
+
+    .terminal-line.info {
+        color: #00f2ff;
+    }
+
+    .terminal-line.success {
+        color: #10b981;
+    }
+
+    .terminal-line.warning {
+        color: #f59e0b;
+    }
+
+    .terminal-line.error {
+        color: #ef4444;
+    }
+
+    /* Results Area */
+    #resultArea {
+        margin-top: 30px;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .cyber-header {
+            flex-direction: column;
+            text-align: center;
+            gap: 15px;
+        }
+
+        .target-input-group {
+            flex-direction: column;
+        }
+
+        .config-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="dashboard-container">
+    <!-- Header -->
+    <div class="cyber-header">
+        <div>
+            <h1>Poirot Security Scanner</h1>
+            <div class="subtitle">Enterprise Network Security Assessment Platform</div>
+        </div>
+    </div>
+
+    <!-- Input Section -->
+    <div class="input-section">
+        <div class="section-title">Target System Configuration</div>
+
+        <div class="target-input-group">
+            <input type="text" id="targetInput" class="target-input"
+                placeholder="Enter IP or Hostname (e.g., scanme.nmap.org)">
+            <button class="scan-btn" type="button" id="scanBtn">Initialize Scan</button>
+        </div>
+
+        <div class="section-title" style="margin-top: 25px;">Scan Parameters</div>
+
+        <div class="config-grid">
+            <div class="config-card active" data-option="sv">
+                <input type="checkbox" id="optSv" checked>
+                <div class="config-card-title">
+                    Service Detection
+                    <span class="check-indicator"></span>
+                </div>
+                <div class="config-card-desc">Identifies running services and their version information (-sV)</div>
+            </div>
+
+            <div class="config-card active" data-option="os">
+                <input type="checkbox" id="optOs" checked>
+                <div class="config-card-title">
+                    OS Fingerprinting
+                    <span class="check-indicator"></span>
+                </div>
+                <div class="config-card-desc">Detects target operating system and platform (-O)</div>
+            </div>
+
+            <div class="config-card" data-option="vuln">
+                <input type="checkbox" id="optVuln">
+                <div class="config-card-title">
+                    Vulnerability Scan
+                    <span class="check-indicator"></span>
+                </div>
+                <div class="config-card-desc">Runs NSE vulnerability detection scripts (--script vuln)</div>
             </div>
         </div>
-    </div>
 
-    <div class="row justify-content-center mt-5">
-        <div class="col-md-10">
-            <div id="resultArea" style="display: none;"></div>
+        <div class="speed-options">
+            <div class="speed-option">
+                <input type="radio" name="speedOpt" id="speedNormal" value="normal">
+                <label for="speedNormal">Standard</label>
+            </div>
+            <div class="speed-option">
+                <input type="radio" name="speedOpt" id="speedFast" value="aggressive" checked>
+                <label for="speedFast">Aggressive (-T4)</label>
+            </div>
+        </div>
+
+        <!-- Terminal Console -->
+        <div id="terminalConsole" class="terminal-console">
+            <div class="terminal-line info">[SYSTEM] Console initialized. Awaiting scan command...</div>
         </div>
     </div>
+
+    <!-- Results Area -->
+    <div id="resultArea"></div>
 </div>
+
+<script>
+    // Card Toggle Logic
+    document.querySelectorAll('.config-card').forEach(card => {
+        card.addEventListener('click', () => {
+            const checkbox = card.querySelector('input[type="checkbox"]');
+            checkbox.checked = !checkbox.checked;
+            card.classList.toggle('active', checkbox.checked);
+        });
+    });
+</script>
 
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 

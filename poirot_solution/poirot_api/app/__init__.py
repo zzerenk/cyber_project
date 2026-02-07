@@ -58,7 +58,7 @@ def create_app(config_class=Config):
         print("="*40 + "\n")
 
     # --- Rotaları Ekleme ---
-    from app.api.routes import main
-    app.register_blueprint(main)
+    from app.api.routes import api 
+    app.register_blueprint(api)
 
     return app

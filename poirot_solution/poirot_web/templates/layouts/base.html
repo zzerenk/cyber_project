@@ -1,22 +1,136 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Project Poirot</title>
+    <title>Poirot - Network Security Scanner</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #111827;
+            --accent-cyber: #00f2ff;
+            --accent-navy: #1e3a8a;
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --border-color: #374151;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+            font-family: 'Inter', sans-serif;
+            color: var(--text-primary);
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Modern Navbar Styling */
+        .modern-navbar {
+            background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
+            border-bottom: 2px solid rgba(0, 242, 255, 0.3);
+            padding: 0;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .modern-navbar .container {
+            padding: 15px 20px;
+        }
+
+        .navbar-brand-custom {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .navbar-brand-custom:hover {
+            transform: translateX(3px);
+        }
+
+        .brand-logo {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--accent-cyber) 0%, #0891b2 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: 700;
+            color: #000;
+            box-shadow: 0 0 15px rgba(0, 242, 255, 0.4);
+        }
+
+        .brand-text {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .brand-name {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--accent-cyber);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            line-height: 1;
+            margin: 0;
+        }
+
+        .brand-tagline {
+            font-size: 10px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 2px;
+        }
+
+        .container-main {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        @media (max-width: 768px) {
+            .brand-name {
+                font-size: 20px;
+            }
+
+            .brand-logo {
+                width: 35px;
+                height: 35px;
+                font-size: 16px;
+            }
+
+            .brand-tagline {
+                font-size: 8px;
+            }
+        }
+    </style>
 </head>
 
-<body class="bg-dark text-light">
+<body>
 
-    <nav class="navbar navbar-expand-lg navbar-dark bg-secondary mb-4">
+    <!-- Modern Navigation Bar -->
+    <nav class="modern-navbar">
         <div class="container">
-            <a class="navbar-brand" href="#">🕵️‍♂️ Poirot Scanner</a>
+            <a href="/" class="navbar-brand-custom">
+                <div class="brand-logo">P</div>
+                <div class="brand-text">
+                    <div class="brand-name">Poirot</div>
+                    <div class="brand-tagline">Network Security Scanner</div>
+                </div>
+            </a>
         </div>
     </nav>
 
-    <div class="container">
+    <div class="container-main">
         {% block content %}{% endblock %}
     </div>
 
