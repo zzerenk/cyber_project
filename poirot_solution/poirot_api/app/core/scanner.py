@@ -2,84 +2,73 @@ import nmap
 import os
 import sys
 import re
-import platform # İşletim sistemini anlamak için şart!
+import platform
 
 class NmapScanner:
     def __init__(self):
-        # 1. İşletim Sistemini Algıla
         sistem = platform.system()
         print(f"🖥️ Çalışan Sistem: {sistem}")
 
-        # 2. Sadece Windows ise Path Ayarı Yap
         if sistem == "Windows":
             nmap_yolu_1 = r"C:\Program Files (x86)\Nmap"
             nmap_yolu_2 = r"C:\Program Files\Nmap"
             os.environ['PATH'] += ";" + nmap_yolu_1 + ";" + nmap_yolu_2
-            print("Running in Windows Mode: Path eklendi.")
         
         try:
             self.nm = nmap.PortScanner()
             print("✅ Scanner Başlatıldı.")
-        except nmap.PortScannerError:
-            if sistem == "Linux":
-                print("❌ HATA: Nmap bulunamadı. Lütfen 'sudo apt install nmap' yapın.")
-            else:
-                print("❌ HATA: Nmap Windows'ta bulunamadı. Yüklü olduğundan emin olun.")
-            sys.exit(1)
         except Exception as e:
             print(f"🔥 Başlatma Hatası: {e}")
             raise
 
     def scan_target(self, target_ip, options={}):
             
-            # 3. Girdi Temizliği (Input Sanitization) - Görünmez boşlukları siler
+            # Girdi Temizliği (Kali'de Hayat Kurtarır)
             if target_ip:
                 target_ip = target_ip.strip().replace("'", "").replace('"', "")
 
-            print(f"\n--- 🕵️‍♂️ TARAMA: {target_ip} ---")
+            print(f"\n--- 🕵️‍♂️ TARAMA BAŞLIYOR: {target_ip} ---")
         
-            args = ["-Pn"] # Ping atma (Varsayılan)
+            # --- 🚀 PROFESYONEL AYARLAR ---
+            args = ["-Pn"] # Ping atma, direkt dal.
 
-            if options.get('detectOS'):
-                args.append("-O")
-                
+            # 1. Servis Versiyonlarını Zorla (Service Names için Kritik)
+            # --version-all: Her probu dene, servisin adını mutlaka bul.
             if options.get('serviceVersion'):
                 args.append("-sV")
-                args.append("--version-intensity 5")
-                
-            if options.get('vulnScan'):
-                args.append("--script vuln")
-                
+                args.append("--version-intensity 9") # 0-9 arası. 9 en detaylısıdır.
+                args.append("--version-all") 
+
+            # 2. İşletim Sistemi (OS)
+            if options.get('detectOS'):
+                args.append("-O")
+                # --osscan-guess: Tam eşleşme yoksa en yakın tahmini zorla
+                args.append("--osscan-guess") 
+
+            # 3. Hız ve Güvenilirlik (Kali VM Ayarı)
             if options.get('speed') == 'aggressive':
+                # -T4: Hızlı ama güvenli.
+                # --max-retries 2: Paket kaybolursa 2 kere daha dene (VMware için şart!)
                 args.append("-T4") 
-                # 🛑 DİKKAT: Sanal Makineyi (Kali) boğan ayar buydu!
-                # args.append("--min-rate 1000")  <-- Bunu kaldırdık. 
-                # T4 zaten yeterince hızlıdır ve paket kaybı yapmaz.
+                args.append("--max-retries 2")
             
-            if options.get('subdomainScan'):
-                args.append("--script dns-brute")
+            # 4. Zafiyet ve Subdomain
+            if options.get('vulnScan'): args.append("--script vuln")
+            if options.get('subdomainScan'): args.append("--script dns-brute")
                 
             arguments_str = " ".join(args)
-            print(f"⚙️ Çalıştırılan Komut: nmap {arguments_str} {target_ip}")
+            print(f"⚙️ Komut: nmap {arguments_str} {target_ip}")
     
             try:
-                # Taramayı başlat
                 self.nm.scan(hosts=target_ip, arguments=arguments_str)
                 
-                # Host listesini kontrol et (DEBUG Ekledim)
-                found_hosts = self.nm.all_hosts()
-                print(f"📋 Bulunan Hostlar: {found_hosts}")
+                # Sonuç Kontrolü
+                if not self.nm.all_hosts():
+                    return {"success": False, "error": "Host down/erişilemiyor."}
 
-                if not found_hosts:
-                    # Eğer host bulunamadıysa scaninfo'yu yazdıralım ki hatayı görelim
-                    print(f"⚠️ Hata Detayı: {self.nm.scaninfo()}")
-                    return {"success": False, "error": "Host down veya erişilemiyor (Host not found)."}
-
-                # IP veya Domain karışıklığını önlemek için her zaman bulunan ilk IP'yi al
-                real_ip = found_hosts[0]
+                real_ip = self.nm.all_hosts()[0]
                 raw_data = self.nm[real_ip]
                 
-                # Veriyi topla
                 summary = {
                     "success": True,
                     "ip": real_ip,
@@ -87,11 +76,12 @@ class NmapScanner:
                     "state": raw_data.state(),
                     "os_match": [],
                     "vulnerabilities": [],
-                    "subdomains": [], # Subdomain listesi başlat
+                    "open_ports": [], # Port detayları için
+                    "subdomains": [],
                     "full_data": raw_data
                 }
 
-                # 1. İşletim Sistemi
+                # OS Parse
                 if 'osmatch' in raw_data:
                     for os in raw_data['osmatch']:
                         summary['os_match'].append({
@@ -99,56 +89,52 @@ class NmapScanner:
                             'accuracy': os['accuracy']
                         })
 
-                # 2. Zafiyetler ve Portlar
+                # Port ve Servis Detayları (İsimler Burada!)
                 if 'tcp' in raw_data:
                     for port, details in raw_data['tcp'].items():
+                        
+                        # Servis Adını ve Versiyonunu Çek
+                        port_info = {
+                            'port': port,
+                            'protocol': 'tcp',
+                            'state': details.get('state', 'unknown'),
+                            'service': details.get('name', 'unknown'), # http, ssh vs.
+                            'product': details.get('product', ''),     # Apache vs.
+                            'version': details.get('version', '')      # 2.4.41 vs.
+                        }
+                        summary['open_ports'].append(port_info)
+
+                        # Zafiyet Scriptleri
                         if 'script' in details:
                             for script_name, output in details['script'].items():
-                                
                                 vuln_entry = {
                                     'port': port,
                                     'script': script_name,
                                     'raw_output': output,
                                     'parsed_data': []
                                 }
-
                                 if 'vulners' in script_name:
-                                    regex_pattern = r'(CVE-\d{4}-\d+|SSV:\d+)\s+(\d+\.\d)\s+(https?://\S+)(.*)?'
-                                    matches = re.findall(regex_pattern, output)
-                                    
+                                    regex = r'(CVE-\d{4}-\d+|SSV:\d+)\s+(\d+\.\d)\s+(https?://\S+)(.*)?'
+                                    matches = re.findall(regex, output)
                                     for match in matches:
                                         vuln_entry['parsed_data'].append({
                                             'id': match[0],
                                             'score': float(match[1]),
                                             'link': match[2],
-                                            'is_exploit': "*EXPLOIT*" in (match[3] if len(match) > 3 else "")
+                                            'is_exploit': "*EXPLOIT*" in (match[3] if len(match)>3 else "")
                                         })
-
                                 summary['vulnerabilities'].append(vuln_entry)
 
-                # 3. Subdomain Discovery Parsing
+                # Subdomains
                 if 'hostscript' in raw_data:
-                    try:
-                        for script in raw_data['hostscript']:
-                            if script.get('id') == 'dns-brute':
-                                output = script.get('output', '')
-                                lines = output.strip().split('\n')
-                                for line in lines:
-                                    line = line.strip()
-                                    if line and ' - ' in line:
-                                        if line.startswith('DNS Brute') or line.startswith('force'):
-                                            continue
-                                        parts = line.split(' - ', 1)
-                                        if len(parts) == 2:
-                                            subdomain = parts[0].strip()
-                                            ip = parts[1].strip()
-                                            if '.' in subdomain:
-                                                summary['subdomains'].append({
-                                                    'domain': subdomain,
-                                                    'ip': ip
-                                                })
-                    except Exception as e:
-                        print(f"⚠️ Subdomain parsing error: {e}")
+                    for script in raw_data['hostscript']:
+                        if script.get('id') == 'dns-brute':
+                            lines = script.get('output', '').strip().split('\n')
+                            for line in lines:
+                                if ' - ' in line and not line.startswith(('DNS', 'force')):
+                                    parts = line.split(' - ', 1)
+                                    if len(parts) == 2 and '.' in parts[0]:
+                                        summary['subdomains'].append({'domain': parts[0].strip(), 'ip': parts[1].strip()})
 
                 return summary
 
